@@ -128,7 +128,44 @@ class KnowledgeBase(object):
         printv("Retracting {!r}", 0, verbose, [fact])
         ####################################################
         # Student code goes here
-        
+        if isinstance(fact, Fact):
+            if fact not in self.facts:
+                return 
+            else:
+                Index = self.facts.index(fact)
+                fact = self.facts[Index]
+        elif isinstance(fact,Rule):
+            if fact not in self.rules:
+                return
+            else:
+                Index = self.rules.index(fact)
+                fact = self.rules[Index]
+
+        if len(fact.supported_by) == 0:
+            if isinstance(fact, Fact):
+                self.facts.remove(fact)
+            elif isinstance(fact,Rule):
+                if fact.asserted:
+                    return
+                else:
+                    self.rules.remove(fact)
+                
+            for i in fact.supports_facts:
+                for j in i.supported_by:
+                    if fact in j:
+                        i.supported_by.remove(j)
+                self.kb_retract(i)
+
+            for i in fact.supports_rules:
+                for j in i.supported_by:
+                    if fact in j:
+                        i.supported_by.remove(j)
+                self.kb_retract(i)
+            
+                            
+                    
+                    
+                
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
@@ -146,3 +183,34 @@ class InferenceEngine(object):
             [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+        bind = match(fact.statement, rule.lhs[0])
+        if bind:
+            if len(rule.lhs) == 1:
+                Output_statement = instantiate(rule.rhs, bind)
+                Output_fact = Fact(Output_statement)
+                if Output_fact in kb.facts:
+                    index = kb.facts.index(Output_fact)
+                    Output_fact = kb.facts[index]
+                if [fact, rule] not in Output_fact.supported_by:
+                    Output_fact.supported_by.append([fact,rule])
+                fact.supports_facts.append(Output_fact)
+                rule.supports_facts.append(Output_fact)
+                if Output_fact not in kb.facts:
+                    kb.kb_assert(Output_fact)
+            else:
+                lhs_list = []
+                for stateoflhs in rule.lhs[1:]:
+                    lhs_list.append(instantiate(stateoflhs, bind))
+                rhs_list = instantiate(rule.rhs, bind)
+                Output_rule = Rule([lhs_list, rhs_list])
+                if Output_rule in kb.rules:
+                    index = kb.rules.index(Output_rule)
+                    Output_rule = kb.rules[index]
+                if [fact, rule] not in Output_rule.supported_by:
+                    Output_rule.supported_by.append([fact,rule])
+                fact.supports_rules.append(Output_rule)
+                rule.supports_rules.append(Output_rule)
+                if Output_rule not in kb.rules:
+                    kb.kb_assert(Output_rule)                
+                
+            
